@@ -1,11 +1,3 @@
--- ------------------------------------------------------------------
--- Title: Extract height and weight for ICUSTAY_IDs
--- Description: This query gets the first, minimum, and maximum weight and height
---        for a single ICUSTAY_ID. It extracts data from the CHARTEVENTS table.
--- MIMIC version: MIMIC-III v1.2
--- Created by: Erin Hong, Alistair Johnson
--- ------------------------------------------------------------------
-
 DROP MATERIALIZED VIEW IF EXISTS heightweight CASCADE;
 CREATE MATERIALIZED VIEW heightweight
 AS

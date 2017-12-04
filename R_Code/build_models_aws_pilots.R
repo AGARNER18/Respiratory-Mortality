@@ -3,8 +3,6 @@ install.packages("doParallel")
 install.packages("e1071")
 install.packages("LogicReg")
 install.packages("randomForest")
-install.packages("caretEnsemble")
-library(caretEnsemble)
 library(LogicReg)
 library(randomForest)
 library(doParallel)
@@ -58,6 +56,48 @@ pilot$lods_pulm<-NULL
 pilot$target<-as.factor(pilot$target)
 pilot$target <- revalue(pilot$target, c("0"="survived", "1"="died"))
 
+names(training)<-tolower(names(training))
+training$admissiontype<-training$admission_type
+training$admission_type<-NULL
+training$admissionlocation<-training$admission_location
+training$admission_location<-NULL
+training$maritalstatus<-training$marital_status
+training$marital_status<-NULL
+training$orgname<-training$org_name
+training$org_name<-NULL
+training$urineoutput<-training$urine_output
+training$urine_output<-NULL
+training$heartratemin<-training$heartrate_min
+training$heartrate_min<-NULL
+training$heartratemax<-training$heartrate_max
+training$heartrate_max<-NULL
+training$sysbpmin<-training$sysbp_min
+training$sysbp_min<-NULL
+training$sysbpmax<-training$sysbp_max
+training$sysbp_max<-NULL
+training$diasbpmin<-training$diasbp_min
+training$diasbp_min<-NULL
+training$diasbpmax<-training$diasbp_max
+training$diasbp_max<-NULL
+training$respratemax<-training$resprate_max
+training$resprate_max<-NULL
+training$tempcmax<-training$tempc_max
+training$tempc_max<-NULL
+training$spo2min<-training$spo2_min
+training$spo2_min<-NULL
+training$spo2max<-training$spo2_max
+training$spo2_max<-NULL
+training$glucosemin<-training$glucose_min
+training$glucose_min<-NULL
+training$glucosemax<-training$glucose_max
+training$glucose_max<-NULL
+training$ventduration<-training$vent_duration
+training$vent_duration<-NULL
+training$lodspulm<-training$lods_pulm
+training$lods_pulm<-NULL
+training$target<-as.factor(training$target)
+training$target <- revalue(training$target, c("0"="survived", "1"="died"))
+
 test<-read.csv("test.csv")
 test$X<-NULL
 names(test)<-tolower(names(test))
@@ -100,7 +140,7 @@ test$vent_duration<-NULL
 test$lodspulm<-test$lods_pulm
 test$lods_pulm<-NULL
 test$target<-as.factor(test$target)
-test$target <- revalue(test$target, c("1"="survived", "2"="died"))
+test$target <- revalue(test$target, c("0"="survived", "1"="died"))
 
 names(pilot2)<-tolower(names(pilot2))
 pilot2$admissiontype<-pilot2$admission_type
@@ -164,7 +204,7 @@ cl <- makeCluster(40); registerDoParallel(cl)
 
 # bagging
 library(ipred)
-bag <- bagging(target ~ ., data=pilot, coob=TRUE, nbagg=25)
+bag <- bagging(target ~ ., data=pilot, coob=TRUE, nbagg=20)
 predictions <- predict(bag)
 bag_train_conf<-table(predictions, pilot$target)
 predictions<-predict(bag, test)
@@ -327,3 +367,45 @@ table(avg_test$pred, test$target)
 # stop cluster and register sequntial front end
 stopCluster(cl); registerDoSEQ();
 
+#*****COMPARE ACCURACY WITHOUT THE OTHER SEVERITY SCORES***********
+train2<-training[,c(1:11, 15, 20:41)]
+test2<-test[,c(1:11,15, 20:41)]
+names(train2)
+install.packages("rpart")
+library(rpart)
+rpart2<-rpart(target~., train2)
+predictions <- predict(rpart2, type="class")
+rpart2_train_conf<-table(predictions, train2$target)
+rpart2_train_conf
+predictions<-predict(rpart2, test2, type="class")
+rpart2_test_conf<-table(predictions, test2$target)
+rpart2_test_conf
+
+logreg <- glm(target ~.,family=binomial,data=training)
+predict <- predict(logreg, type = 'response')
+table(training$target, predict > 0.5)
+predict<-predict(logreg, test, type="response")
+table(test$target, predict > 0.5)
+
+logreg2 <- glm(target ~.,family=binomial,data=train2)
+predict <- predict(logreg2, type = 'response')
+table(train2$target, predict > 0.5)
+predict<-predict(logreg2, test2, type="response")
+table(test2$target, predict > 0.5)
+
+library(PRROC)
+library(pROC)
+result.predicted.prob1 <- predict(bag, test, type="prob") # Prediction
+result.predicted.prob1<-as.data.frame(result.predicted.prob1)
+result.roc1 <- roc(test$target, result.predicted.prob1$result.predicted.prob1) # Draw ROC curve.
+plot(result.roc1, col="cyan4", lwd=2)
+
+library(ROCR)
+data("ROCR.simple")
+result.predicted.prob1 <- predict(bag, test, type="prob")
+pred <- prediction(result.predicted.prob1, test$target)
+perf <- performance(pred,"tpr","fpr")
+plot(perf)
+## precision/recall curve (x-axis: recall, y-axis: precision)
+perf1 <- performance(pred, "prec", "rec")
+plot(perf1)

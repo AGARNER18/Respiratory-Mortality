@@ -1,9 +1,3 @@
--- The aim of this query is to pivot entries related to blood gases and
--- chemistry values which were found in LABEVENTS
-
--- things to check:
---  when a mixed venous/arterial blood sample are taken at the same time, is the store time different?
-
 DROP MATERIALIZED VIEW IF EXISTS bloodgasfirstday CASCADE;
 create materialized view bloodgasfirstday as
 with pvt as
